@@ -130,6 +130,8 @@ watch(() => route.name as string, (routeName) => {
 				'migrate.start',
 				'migrate.wunderlist',
 				'projects.index',
+				'iterations.index',
+				'iterations.detail',
 			].includes(routeName) ||
 			routeName.startsWith('user.settings')
 		)

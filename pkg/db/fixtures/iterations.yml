@@ -1,0 +1,30 @@
+- id: 1
+  title: '2026 week 32'
+  description: 'Current fixture iteration'
+  start_date: 2026-08-03 00:00:00
+  end_date: 2026-08-10 00:00:00
+  status: active
+  owner_id: 1
+  previous_iteration_id: 0
+  created: 2026-08-02 00:00:00
+  updated: 2026-08-02 00:00:00
+- id: 2
+  title: '2026 week 33'
+  description: 'Next fixture iteration'
+  start_date: 2026-08-10 00:00:00
+  end_date: 2026-08-17 00:00:00
+  status: planned
+  owner_id: 1
+  previous_iteration_id: 1
+  created: 2026-08-02 00:00:00
+  updated: 2026-08-02 00:00:00
+- id: 3
+  title: 'Another user iteration'
+  description: 'Not visible to user 1'
+  start_date: 2026-08-03 00:00:00
+  end_date: 2026-08-10 00:00:00
+  status: active
+  owner_id: 2
+  previous_iteration_id: 0
+  created: 2026-08-02 00:00:00
+  updated: 2026-08-02 00:00:00

@@ -540,7 +540,8 @@
 		"upcoming": "即将开始",
 		"settings": "设置",
 		"imprint": "版权信息",
-		"privacy": "隐私政策"
+		"privacy": "隐私政策",
+		"iterations": "迭代"
 	},
 	"misc": {
 		"loading": "载入中...",
@@ -571,7 +572,8 @@
 		"created": "创建于",
 		"createdBy": "由 {0} 创建",
 		"actions": "行为",
-		"cannotBeUndone": "此操作无法撤消！"
+		"cannotBeUndone": "此操作无法撤消！",
+		"edit": "编辑"
 	},
 	"input": {
 		"resetColor": "重置颜色",
@@ -715,6 +717,7 @@
 	},
 	"task": {
 		"new": "新建任务",
+		"title": "任务",
 		"createSuccess": "成功创建任务",
 		"addReminder": "添加提醒...",
 		"doneSuccess": "待办事项已标记为完成。",
@@ -784,6 +787,8 @@
 			"labels": "标签",
 			"percentDone": "进度",
 			"priority": "优先级",
+			"project": "项目",
+			"status": "状态",
 			"relatedTasks": "相关任务",
 			"reminders": "提醒",
 			"repeat": "重复",
@@ -1205,6 +1210,91 @@
 		"version": "版本：{version}",
 		"frontendVersion": "前端版本: {version}",
 		"apiVersion": "API 版本: {version}"
+	},
+	"iteration": {
+		"title": "迭代",
+		"eyebrow": "计划与回顾",
+		"subtitle": "按固定时间周期规划多个项目中的任务，并将未完成任务流转到下一个迭代。",
+		"create": "创建迭代",
+		"search": "搜索迭代名称…",
+		"count": "{count} 个迭代",
+		"completedTasks": "已完成 {done} / {total}",
+		"taskCount": "{count} 个任务",
+		"viewHistory": "查看历史",
+		"viewDetail": "查看详情 →",
+		"overlapping": "此迭代与其他迭代的时间范围重叠。",
+		"created": "迭代已创建。",
+		"updated": "迭代已更新。",
+		"started": "迭代已开始。",
+		"reopened": "迭代已重新打开。",
+		"closed": "迭代已关闭。",
+		"start": "开始迭代",
+		"reopen": "重新打开迭代",
+		"closeAction": "关闭迭代",
+		"status": {
+			"planned": "计划中",
+			"active": "进行中",
+			"closed": "已关闭"
+		},
+		"sort": {
+			"start": "按开始时间排序",
+			"end": "按结束时间排序",
+			"title": "按名称排序"
+		},
+		"metrics": {
+			"total": "全部任务",
+			"done": "已完成",
+			"open": "未完成",
+			"rate": "完成率"
+		},
+		"empty": {
+			"title": "暂无迭代",
+			"text": "创建一个迭代，开始规划不同项目中的任务。"
+		},
+		"form": {
+			"title": "名称",
+			"start": "开始时间",
+			"end": "结束时间",
+			"description": "描述",
+			"descriptionPlaceholder": "记录本次迭代的目标和交付范围",
+			"invalidDates": "结束时间必须晚于开始时间。"
+		},
+		"next": {
+			"title": "创建下一个迭代",
+			"create": "创建下一迭代",
+			"defaultTitle": "{title} · 下一迭代"
+		},
+		"tasks": {
+			"search": "搜索任务标题或描述…",
+			"projects": "项目",
+			"hideDone": "隐藏已完成任务",
+			"emptyPicker": "没有符合筛选条件的任务。",
+			"permissionHint": "任务仍保留在原项目中。要修改任务所属迭代，需要拥有对应项目的写入权限。",
+			"addSelected": "添加选中的 {count} 个任务",
+			"add": "添加任务",
+			"allStatus": "全部状态",
+			"open": "未完成",
+			"selected": "已选择 {count} 个",
+			"remove": "从迭代中移除",
+			"empty": "没有符合当前筛选条件的任务。",
+			"added": "任务已添加到迭代。",
+			"removed": "任务已从迭代中移除。"
+		},
+		"close": {
+			"target": "流转到",
+			"noRollover": "不流转任务",
+			"selectAll": "选择所有未完成任务",
+			"hint": "关闭迭代不会完成任务。未流转的任务仍保留在原项目中，但不再属于当前迭代。",
+			"submit": "关闭并流转"
+		},
+		"taskSection": {
+			"title": "迭代",
+			"current": "当前迭代",
+			"none": "未加入迭代",
+			"hint": "修改所属迭代不会将任务移出原项目。",
+			"history": "参与历史",
+			"updated": "任务所属迭代已更新。"
+		}
 	},
 	"time": {
 		"units": {

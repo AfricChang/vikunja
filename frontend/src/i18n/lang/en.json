@@ -757,7 +757,8 @@
     "home": "Vikunja home",
     "toggleChildProjects": "Toggle sub-projects",
     "main": "Main navigation",
-    "savedFilters": "Saved filters"
+    "savedFilters": "Saved filters",
+    "iterations": "Iterations"
   },
   "misc": {
     "loading": "Loading…",
@@ -797,7 +798,8 @@
     "sortBy": "Sort by",
     "dateRange": "Date range",
     "notSet": "Not set",
-    "user": "User"
+    "user": "User",
+    "edit": "Edit"
   },
   "input": {
     "projectColor": "Project color",
@@ -954,6 +956,7 @@
   },
   "task": {
     "new": "Create a task",
+    "title": "Task",
     "createSuccess": "The task was successfully created.",
     "addReminder": "Add a reminder…",
     "removeReminder": "Remove this reminder",
@@ -1054,6 +1057,7 @@
       "attachment": "{count} attachment | {count} attachments",
       "startDate": "Start Date",
       "title": "Title",
+      "status": "Status",
       "updated": "Updated",
       "doneAt": "Done At"
     },
@@ -1501,6 +1505,91 @@
     "version": "Version: {version}",
     "frontendVersion": "Frontend version: {version}",
     "apiVersion": "API version: {version}"
+  },
+  "iteration": {
+    "title": "Iterations",
+    "eyebrow": "Planning and review",
+    "subtitle": "Plan tasks from multiple projects in a time-boxed cycle and roll unfinished work into the next iteration.",
+    "create": "Create iteration",
+    "search": "Search iteration names…",
+    "count": "{count} iteration | {count} iterations",
+    "completedTasks": "{done} / {total} completed",
+    "taskCount": "{count} task | {count} tasks",
+    "viewHistory": "View history",
+    "viewDetail": "View details →",
+    "overlapping": "This iteration overlaps another iteration.",
+    "created": "Iteration created.",
+    "updated": "Iteration updated.",
+    "started": "Iteration started.",
+    "reopened": "Iteration reopened.",
+    "closed": "Iteration closed.",
+    "start": "Start iteration",
+    "reopen": "Reopen iteration",
+    "closeAction": "Close iteration",
+    "status": {
+      "planned": "Planned",
+      "active": "Active",
+      "closed": "Closed"
+    },
+    "sort": {
+      "start": "Sort by start date",
+      "end": "Sort by end date",
+      "title": "Sort by name"
+    },
+    "metrics": {
+      "total": "All tasks",
+      "done": "Completed",
+      "open": "Open",
+      "rate": "Completion"
+    },
+    "empty": {
+      "title": "No iterations yet",
+      "text": "Create an iteration to plan tasks across projects."
+    },
+    "form": {
+      "title": "Name",
+      "start": "Start time",
+      "end": "End time",
+      "description": "Description",
+      "descriptionPlaceholder": "Record the goal and delivery scope for this iteration",
+      "invalidDates": "The end time must be after the start time."
+    },
+    "next": {
+      "title": "Create the next iteration",
+      "create": "Create next iteration",
+      "defaultTitle": "{title} · next"
+    },
+    "tasks": {
+      "search": "Search task titles or descriptions…",
+      "projects": "Projects",
+      "hideDone": "Hide completed tasks",
+      "emptyPicker": "No tasks match these filters.",
+      "permissionHint": "Tasks stay in their original projects. You need write permission on each project to change its iteration.",
+      "addSelected": "Add {count} selected",
+      "add": "Add tasks",
+      "allStatus": "All statuses",
+      "open": "Open",
+      "selected": "{count} selected",
+      "remove": "Remove from iteration",
+      "empty": "No tasks match the current filters.",
+      "added": "Tasks added to the iteration.",
+      "removed": "Tasks removed from the iteration."
+    },
+    "close": {
+      "target": "Roll over to",
+      "noRollover": "Do not roll tasks over",
+      "selectAll": "Select all unfinished tasks",
+      "hint": "Closing does not complete tasks. Tasks not rolled over remain in their original project without a current iteration.",
+      "submit": "Close and roll over"
+    },
+    "taskSection": {
+      "title": "Iteration",
+      "current": "Current iteration",
+      "none": "No iteration",
+      "hint": "Changing the iteration does not move the task out of its project.",
+      "history": "Participation history",
+      "updated": "Iteration updated."
+    }
   },
   "timeTracking": {
     "title": "Time tracking",

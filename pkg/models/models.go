@@ -72,6 +72,9 @@ func GetTables() []interface{} {
 		&Session{},
 		&OAuthCode{},
 		&TimeEntry{},
+		&Iteration{},
+		&IterationTask{},
+		&TaskIterationHistory{},
 	}
 }
 

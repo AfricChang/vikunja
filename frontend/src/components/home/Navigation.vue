@@ -53,6 +53,14 @@
 					</RouterLink>
 				</li>
 				<li>
+					<RouterLink :to="{name: 'iterations.index'}">
+						<span class="menu-item-icon icon">
+							<Icon icon="list-check" />
+						</span>
+						{{ $t('navigation.iterations') }}
+					</RouterLink>
+				</li>
+				<li>
 					<RouterLink
 						v-shortcut="'KeyG KeyA'"
 						:to="{ name: 'labels.index'}"

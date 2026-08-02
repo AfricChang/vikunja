@@ -381,6 +381,12 @@
 					</div>
 
 					<!-- Related Tasks -->
+					<TaskIterationSection
+						:task-id="task.id"
+						:can-write="canWrite"
+					/>
+
+					<!-- Related Tasks -->
 					<div
 						v-if="activeFields.relatedTasks"
 						class="content details mbe-0"
@@ -674,6 +680,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 // partials
 import Attachments from '@/components/tasks/partials/Attachments.vue'
 import TaskTimeTracking from '@/components/time-tracking/TaskTimeTracking.vue'
+import TaskIterationSection from '@/components/iterations/TaskIterationSection.vue'
 import ChecklistSummary from '@/components/tasks/partials/ChecklistSummary.vue'
 import ColorPicker from '@/components/input/ColorPicker.vue'
 import Comments from '@/components/tasks/partials/Comments.vue'

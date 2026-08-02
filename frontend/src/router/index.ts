@@ -244,6 +244,18 @@ const router = createRouter({
 			component: () => import('@/views/project/ListProjects.vue'),
 		},
 		{
+			path: '/iterations',
+			name: 'iterations.index',
+			component: () => import('@/views/iterations/IterationList.vue'),
+			meta: {title: 'iteration.title'},
+		},
+		{
+			path: '/iterations/:id',
+			name: 'iterations.detail',
+			component: () => import('@/views/iterations/IterationDetail.vue'),
+			props: route => ({id: Number(route.params.id as string)}),
+		},
+		{
 			path: '/projects/new',
 			name: 'project.create',
 			component: () => import('@/views/project/NewProject.vue'),

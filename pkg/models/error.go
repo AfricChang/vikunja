@@ -2631,6 +2631,104 @@ func (err ErrTimeEntryEndBeforeStart) HTTPError() web.HTTPError {
 // User export errors
 // =================
 
+// =================
+// Iteration errors
+// =================
+
+type ErrIterationDoesNotExist struct{ IterationID int64 }
+
+func (err ErrIterationDoesNotExist) Error() string {
+	return fmt.Sprintf("Iteration does not exist [IterationID: %d]", err.IterationID)
+}
+
+const ErrCodeIterationDoesNotExist = 20001
+
+func (err ErrIterationDoesNotExist) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusNotFound, Code: ErrCodeIterationDoesNotExist, Message: "The iteration does not exist."}
+}
+
+type ErrInvalidIterationDates struct{ IterationID int64 }
+
+func (err ErrInvalidIterationDates) Error() string {
+	return fmt.Sprintf("Invalid iteration dates [IterationID: %d]", err.IterationID)
+}
+
+const ErrCodeInvalidIterationDates = 20002
+
+func (err ErrInvalidIterationDates) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusBadRequest, Code: ErrCodeInvalidIterationDates, Message: "The iteration end date must be after its start date."}
+}
+
+type ErrIterationClosed struct{ IterationID int64 }
+
+func (err ErrIterationClosed) Error() string {
+	return fmt.Sprintf("Iteration is closed [IterationID: %d]", err.IterationID)
+}
+
+const ErrCodeIterationClosed = 20003
+
+func (err ErrIterationClosed) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusConflict, Code: ErrCodeIterationClosed, Message: "The iteration is closed."}
+}
+
+type ErrTaskAlreadyInIteration struct{ TaskID, IterationID int64 }
+
+func (err ErrTaskAlreadyInIteration) Error() string {
+	return fmt.Sprintf("Task already belongs to an iteration [TaskID: %d, IterationID: %d]", err.TaskID, err.IterationID)
+}
+
+const ErrCodeTaskAlreadyInIteration = 20004
+
+func (err ErrTaskAlreadyInIteration) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusConflict, Code: ErrCodeTaskAlreadyInIteration, Message: "The task already belongs to another iteration."}
+}
+
+type ErrInvalidIterationTransition struct{ IterationID int64 }
+
+func (err ErrInvalidIterationTransition) Error() string {
+	return fmt.Sprintf("Invalid iteration transition [IterationID: %d]", err.IterationID)
+}
+
+const ErrCodeInvalidIterationTransition = 20005
+
+func (err ErrInvalidIterationTransition) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusConflict, Code: ErrCodeInvalidIterationTransition, Message: "This iteration state transition is not valid."}
+}
+
+type ErrIterationTasksNeedAtLeastOne struct{}
+
+func (err ErrIterationTasksNeedAtLeastOne) Error() string { return "At least one task is required" }
+
+const ErrCodeIterationTasksNeedAtLeastOne = 20006
+
+func (err ErrIterationTasksNeedAtLeastOne) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusBadRequest, Code: ErrCodeIterationTasksNeedAtLeastOne, Message: "At least one task is required."}
+}
+
+type ErrIterationHasHistory struct{ IterationID int64 }
+
+func (err ErrIterationHasHistory) Error() string {
+	return fmt.Sprintf("Iteration has history [IterationID: %d]", err.IterationID)
+}
+
+const ErrCodeIterationHasHistory = 20007
+
+func (err ErrIterationHasHistory) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusConflict, Code: ErrCodeIterationHasHistory, Message: "Iterations with task history cannot be deleted."}
+}
+
+type ErrIterationAlreadyHasNext struct{ IterationID int64 }
+
+func (err ErrIterationAlreadyHasNext) Error() string {
+	return fmt.Sprintf("Iteration already has a next iteration [IterationID: %d]", err.IterationID)
+}
+
+const ErrCodeIterationAlreadyHasNext = 20008
+
+func (err ErrIterationAlreadyHasNext) HTTPError() web.HTTPError {
+	return web.HTTPError{HTTPCode: http.StatusConflict, Code: ErrCodeIterationAlreadyHasNext, Message: "This iteration already has a next iteration."}
+}
+
 // ErrUserDataExportDoesNotExist represents an error where a user has no ready data export to download.
 type ErrUserDataExportDoesNotExist struct{}
 

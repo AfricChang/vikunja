@@ -1,0 +1,22 @@
+- id: 1
+  task_id: 1
+  iteration_id: 1
+  joined_at: 2026-08-03 00:00:00
+  joined_by_id: 1
+  left_by_id: 0
+  left_reason: ''
+  source_iteration_id: 0
+  target_iteration_id: 0
+  task_title: 'task #1'
+  project_id: 1
+- id: 2
+  task_id: 2
+  iteration_id: 1
+  joined_at: 2026-08-03 00:00:00
+  joined_by_id: 1
+  left_by_id: 0
+  left_reason: ''
+  source_iteration_id: 0
+  target_iteration_id: 0
+  task_title: 'task #2 done'
+  project_id: 1
