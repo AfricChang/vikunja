@@ -126,7 +126,22 @@
 								v-model="selectAll"
 								type="checkbox"
 							>
-						</th><th>{{ $t('task.title') }}</th><th>{{ $t('task.attributes.project') }}</th><th>{{ $t('task.attributes.status') }}</th><th>{{ $t('task.attributes.priority') }}</th><th>{{ $t('task.attributes.dueDate') }}</th>
+						</th>
+						<th
+							v-for="column in taskColumns"
+							:key="column.key"
+							:aria-sort="ariaSort(column.key)"
+						>
+							<button
+								type="button"
+								class="iteration-detail__sort"
+								:class="{'is-active': sortBy === column.key}"
+								@click="toggleSort(column.key)"
+							>
+								{{ column.label }}
+								<Icon :icon="sortIcon(column.key)" />
+							</button>
+						</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -292,6 +307,20 @@ import {error, success} from '@/message'
 import type {IIteration} from '@/modelTypes/IIteration'
 import type {ITask} from '@/modelTypes/ITask'
 
+// Sort keys the iteration task endpoint accepts, in table column order.
+type SortColumn = 'title' | 'project' | 'done' | 'priority' | 'due_date'
+type SortOrder = 'asc' | 'desc'
+
+// Priority and due date are most useful with the urgent end first; the rest read
+// naturally ascending. Only applies to the first click on a column.
+const SORT_INITIAL_ORDER: Record<SortColumn, SortOrder> = {
+	title: 'asc',
+	project: 'asc',
+	done: 'asc',
+	priority: 'desc',
+	due_date: 'asc',
+}
+
 const {t} = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -304,6 +333,8 @@ const saving = ref(false)
 const query = ref('')
 const status = ref('')
 const selected = ref<number[]>([])
+const sortBy = ref<SortColumn>('done')
+const orderBy = ref<SortOrder>('asc')
 const pickerOpen = ref(false)
 const formOpen = ref(false)
 const nextOpen = ref(false)
@@ -325,8 +356,45 @@ const selectAll = computed({
 })
 const nextDefaults = computed(() => iteration.value ? {title: t('iteration.next.defaultTitle', {title: iteration.value.title}), startDate: iteration.value.endDate, endDate: new Date(iteration.value.endDate.getTime() + (iteration.value.endDate.getTime() - iteration.value.startDate.getTime()))} : {})
 
+const taskColumns = computed<{key: SortColumn, label: string}[]>(() => [
+	{key: 'title', label: t('task.title')},
+	{key: 'project', label: t('task.attributes.project')},
+	{key: 'done', label: t('task.attributes.status')},
+	{key: 'priority', label: t('task.attributes.priority')},
+	{key: 'due_date', label: t('task.attributes.dueDate')},
+])
+
 function projectTitle(id: number) { return projectStore.projects[id]?.title ?? `#${id}` }
 function formatDate(date: Date) { return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(date) }
+
+function toggleSort(column: SortColumn) {
+	if (sortBy.value === column) {
+		orderBy.value = orderBy.value === 'asc' ? 'desc' : 'asc'
+	} else {
+		sortBy.value = column
+		orderBy.value = SORT_INITIAL_ORDER[column]
+	}
+
+	// Sorting is done by the server over the whole iteration, so a different page of
+	// tasks can come back - keeping ids selected that are no longer on screen would
+	// make the bulk remove act on invisible tasks.
+	selected.value = []
+	load()
+}
+
+function sortIcon(column: SortColumn) {
+	if (sortBy.value !== column) {
+		return 'sort'
+	}
+	return orderBy.value === 'asc' ? 'arrow-up-short-wide' : 'arrow-down-short-wide'
+}
+
+function ariaSort(column: SortColumn) {
+	if (sortBy.value !== column) {
+		return 'none'
+	}
+	return orderBy.value === 'asc' ? 'ascending' : 'descending'
+}
 
 async function load() {
 	loading.value = true
@@ -334,7 +402,7 @@ async function load() {
 		const id = Number(route.params.id)
 		const [loaded, taskResult, targetResult] = await Promise.all([
 			service.get(id),
-			service.listTasks(id, {q: query.value, status: status.value, sortBy: 'done', orderBy: 'asc', perPage: 100}),
+			service.listTasks(id, {q: query.value, status: status.value, sortBy: sortBy.value, orderBy: orderBy.value, perPage: 100}),
 			service.list({status: 'planned', perPage: 100}),
 		])
 		iteration.value = loaded
@@ -449,6 +517,25 @@ onMounted(load)
 .iteration-detail__bulk.is-visible { display: flex; }
 .iteration-detail__table { overflow: hidden; }
 .iteration-detail__table table { margin: 0; }
+
+.iteration-detail__sort {
+	display: inline-flex;
+	align-items: center;
+	gap: .4rem;
+	background: none;
+	border: none;
+	padding: 0;
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+}
+
+.iteration-detail__sort:hover { color: var(--primary); }
+
+// The neutral icon is a hint that the column is sortable, so it stays faint until
+// the column is the one actually being sorted by.
+.iteration-detail__sort svg { opacity: .35; }
+.iteration-detail__sort.is-active svg { opacity: 1; }
 
 .iteration-detail__close-list {
 	max-block-size: 15rem;

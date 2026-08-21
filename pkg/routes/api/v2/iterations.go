@@ -149,7 +149,7 @@ func iterationTasksList(ctx context.Context, in *struct {
 	ID        int64  `path:"iteration"`
 	ProjectID string `query:"project_id"`
 	Status    string `query:"status" enum:"open,done"`
-	SortBy    string `query:"sort_by" enum:"title,done,priority,due_date,start_date,id" default:"done"`
+	SortBy    string `query:"sort_by" enum:"title,done,priority,due_date,start_date,id,project" default:"done"`
 	OrderBy   string `query:"order_by" enum:"asc,desc" default:"asc"`
 	Format    string `query:"format" enum:"html,markdown"`
 }) (*iterationTaskListBody, error) {

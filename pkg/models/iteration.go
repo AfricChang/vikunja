@@ -263,7 +263,7 @@ func ListIterationTasks(s *xorm.Session, a web.Auth, iterationID int64, search, 
 	if err != nil {
 		return nil, 0, err
 	}
-	allowedSort := map[string]string{"title": "tasks.title", "done": "tasks.done", "priority": "tasks.priority", "due_date": "tasks.due_date", "start_date": "tasks.start_date", "id": "tasks.id"}
+	allowedSort := map[string]string{"title": "tasks.title", "done": "tasks.done", "priority": "tasks.priority", "due_date": "tasks.due_date", "start_date": "tasks.start_date", "id": "tasks.id", "project": "projects.title"}
 	column := allowedSort[sortBy]
 	if column == "" {
 		column = "tasks.done"
@@ -273,7 +273,13 @@ func ListIterationTasks(s *xorm.Session, a web.Auth, iterationID int64, search, 
 		direction = "ASC"
 	}
 	tasks := []*Task{}
-	err = s.Table("tasks").Join("INNER", "iteration_tasks", "iteration_tasks.task_id = tasks.id").Where(cond).
+	query := s.Table("tasks").Join("INNER", "iteration_tasks", "iteration_tasks.task_id = tasks.id")
+	if column == "projects.title" {
+		// Only the projects table has the title to sort by. LEFT so a task can never be
+		// dropped from the list just because its project row can't be joined.
+		query = query.Join("LEFT", "projects", "projects.id = tasks.project_id")
+	}
+	err = query.Where(cond).
 		OrderBy(column + " " + direction + ", tasks.id DESC").Limit(getLimitFromPageIndex(page, perPage)).Find(&tasks)
 	if err != nil {
 		return nil, 0, err
