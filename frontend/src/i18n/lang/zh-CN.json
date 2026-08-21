@@ -214,6 +214,7 @@
 		"projects": "项目",
 		"parent": "父项目",
 		"search": "输入以搜索项目…",
+		"selectOrSearch": "选择一个项目，或输入以搜索…",
 		"searchSelect": "点击或按下回车键以选择此项目",
 		"shared": "共享项目",
 		"noDescriptionAvailable": "没有可用的项目描述。",
@@ -227,7 +228,7 @@
 			"titlePlaceholder": "项目标题",
 			"addTitleRequired": "请指定一个标题。",
 			"createdSuccess": "已成功创建此项目。",
-			"addProjectRequired": "请指定列表或在设置中设置默认列表。"
+			"addProjectRequired": "请指定一个项目，或在设置中设置默认项目。"
 		},
 		"archive": {
 			"title": "存档 \"{project}\"",
@@ -255,12 +256,12 @@
 			"success": "项目已成功删除。",
 			"tasksToDelete": "此操作无法撤消！将移除大约 {count} 个任务。",
 			"tasksAndChildProjectsToDelete": "删除将不可挽回。 {tasks} 任务和 {projects} 项目。",
-			"noTasksToDelete": "此列表不包含任何任务，可以安全删除。"
+			"noTasksToDelete": "此项目不包含任何任务，可以安全删除。"
 		},
 		"duplicate": {
 			"title": "复制此项目",
 			"label": "复制",
-			"text": "选择一个已存在的命名空间以容纳该列表的副本",
+			"text": "选择一个父项目，用于存放复制出的项目：",
 			"success": "项目已成功复制."
 		},
 		"edit": {
@@ -282,7 +283,7 @@
 			"links": {
 				"title": "共享链接",
 				"what": "什么是共享链接？",
-				"explanation": "共享链接使您能够轻松地与其他未注册账户的访客共享一个列表。",
+				"explanation": "共享链接使您能够轻松地与其他没有 Vikunja 账户的用户共享一个项目。",
 				"create": "创建共享链接",
 				"name": "共享链接名称 (可选)",
 				"namePlaceholder": "例如：Lorem Ipsum",
@@ -292,7 +293,7 @@
 				"noName": "未设置名称",
 				"remove": "删除链接共享",
 				"removeText": "您确定要删除此链接共享吗？它将无法使用此链接共享访问此项目。 这不能撤消！",
-				"createSuccess": "列表共享链接成功创建。",
+				"createSuccess": "共享链接创建成功。",
 				"deleteSuccess": "共享链接已删除",
 				"view": "查看",
 				"sharedBy": "{0} 分享"
@@ -327,6 +328,8 @@
 			"title": "列表",
 			"add": "添加",
 			"addPlaceholder": "添加任务…",
+			"addToProject": "添加到",
+			"addToProjectNoDefault": "尚未设置默认项目。请在此处选择一个项目，或在设置中设置默认项目。",
 			"empty": "此项目目前为空。",
 			"newTaskCta": "新建任务。",
 			"editTask": "编辑任务"
@@ -1147,7 +1150,7 @@
 		"2002": "一些请求数据无效。",
 		"3001": "项目不存在",
 		"3004": "您需要读取该项目的权限才能执行此操作。",
-		"3005": "列表标题不能为空。",
+		"3005": "项目标题不能为空。",
 		"3006": "项目共享不存在。",
 		"3007": "具有此标识符的项目已存在。",
 		"3008": "该项目已存档，因此只能读取。与该项目相关的所有任务也是如此。",

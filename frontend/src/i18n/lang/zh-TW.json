@@ -237,6 +237,7 @@
 		"projects": "專案",
 		"parent": "父專案",
 		"search": "輸入以搜索專案…",
+		"selectOrSearch": "選擇一個專案，或輸入以搜尋…",
 		"searchSelect": "點擊或按 Enter 以選取此專案",
 		"shared": "共享專案",
 		"noDescriptionAvailable": "沒有可用的專案描述。",
@@ -251,7 +252,7 @@
 			"titlePlaceholder": "專案標題…",
 			"addTitleRequired": "請指定一個標題。",
 			"createdSuccess": "已成功創建此專案。",
-			"addProjectRequired": "請指定列表或在設定中設置默認列表。"
+			"addProjectRequired": "請指定一個專案，或在設定中設定預設專案。"
 		},
 		"archive": {
 			"title": "封存 \"{project}\"",
@@ -279,7 +280,7 @@
 			"success": "專案已成功刪除。",
 			"tasksToDelete": "此操作將不可逆地移除約 {count} 筆任務，完成後將無法復原。",
 			"tasksAndChildProjectsToDelete": "這將不可逆地刪除 {tasks} 個任務和 {projects} 個專案。",
-			"noTasksToDelete": "此列表不包含任何任務，可以安全刪除。"
+			"noTasksToDelete": "此專案不包含任何任務，可以安全刪除。"
 		},
 		"duplicate": {
 			"title": "複製此專案",
@@ -306,7 +307,7 @@
 			"links": {
 				"title": "分享連結",
 				"what": "什麼是分享連結？",
-				"explanation": "共享鏈接使您能夠輕鬆地與其他未註冊帳號的訪客共享一個列表。",
+				"explanation": "分享連結使您能夠輕鬆地與其他沒有 Vikunja 帳號的使用者分享一個專案。",
 				"create": "建立分享連結",
 				"name": "分享連結名稱 (可選)",
 				"namePlaceholder": "例如：Lorem Ipsum",
@@ -351,6 +352,8 @@
 			"title": "清單",
 			"add": "新增",
 			"addPlaceholder": "新增任務…",
+			"addToProject": "新增至",
+			"addToProjectNoDefault": "尚未設定預設專案。請在此處選擇一個專案，或在設定中設定預設專案。",
 			"empty": "此專案目前為空。",
 			"newTaskCta": "新增任務。",
 			"editTask": "編輯任務"
@@ -982,7 +985,7 @@
 		"1025": "時區「{timezone}」無效。請從清單中選擇有效的時區。",
 		"3001": "專案不存在。",
 		"3004": "您需要對該專案具有讀取權限才能執行此操作。",
-		"3005": "清單標題不能為空。",
+		"3005": "專案標題不能為空。",
 		"3006": "該專案的分享不存在。",
 		"3007": "具有此識別碼的專案已存在。",
 		"3008": "此專案已封存，因此僅能以唯讀方式存取。與此專案相關的所有任務亦同樣只能以唯讀方式存取。",

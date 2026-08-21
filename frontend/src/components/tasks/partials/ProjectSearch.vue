@@ -1,9 +1,10 @@
 <template>
 	<Multiselect
 		class="control is-expanded"
-		:placeholder="$t('project.search')"
+		:placeholder="showAllWhenEmpty ? $t('project.selectOrSearch') : $t('project.search')"
 		:search-results="foundProjects"
 		label="title"
+		:show-empty="showAllWhenEmpty"
 		:select-placeholder="$t('project.searchSelect')"
 		:model-value="project"
 		@update:modelValue="(val) => val === null ? select(null) : Object.assign(project, val)"
@@ -37,10 +38,16 @@ const props = withDefaults(defineProps<{
 	modelValue?: IProject
 	savedFiltersOnly?: boolean
 	filter?: (project: IProject) => boolean,
+	/**
+	 * Lists every project while the search box is empty, so the field can be used as a
+	 * plain picker - typing a search becomes optional instead of the only way in.
+	 */
+	showAllWhenEmpty?: boolean,
 }>(), {
 	modelValue: () => new ProjectModel(),
 	savedFiltersOnly: false,
 	filter: () => true,
+	showAllWhenEmpty: false,
 })
 
 const emit = defineEmits<{
@@ -60,21 +67,43 @@ watch(
 
 const projectStore = useProjectStore()
 
+const searchQuery = ref('')
 const foundProjects = ref<IProject[]>([])
+
+function projectsForQuery(query: string): IProject[] {
+	// The store's search returns nothing for an empty query, which would leave an
+	// untouched box with an empty dropdown - list everything instead, so picking a
+	// project doesn't require typing a search first.
+	if (props.showAllWhenEmpty && query === '') {
+		const all = props.savedFiltersOnly
+			? projectStore.savedFilterProjects
+			: projectStore.projectsArray.filter(p => p.id > 0 && !p.isArchived)
+		return (all as IProject[]).filter(props.filter)
+	}
+
+	const found = props.savedFiltersOnly
+		? projectStore.searchSavedFilter(query)
+		: projectStore.searchProject(query)
+	return found.filter(props.filter)
+}
+
 function findProjects(query: string) {
+	searchQuery.value = query
+
 	if (query === '') {
 		select(null)
 	}
-	
-	if (props.savedFiltersOnly) {
-		const found = projectStore.searchSavedFilter(query)
-		foundProjects.value = found.filter(props.filter)
-		return
-	}
-	
-	const found = projectStore.searchProject(query)
-	foundProjects.value = found.filter(props.filter)
+
+	foundProjects.value = projectsForQuery(query)
 }
+
+// Projects are loaded asynchronously, so the unsearched list has to be refreshed once
+// they arrive - otherwise the dropdown stays empty on a freshly loaded page.
+watch(
+	() => projectStore.projectsArray,
+	() => foundProjects.value = projectsForQuery(searchQuery.value),
+	{immediate: true},
+)
 
 function select(p: IProject | null) {
 	if (p === null) {

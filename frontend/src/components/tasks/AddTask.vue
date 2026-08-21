@@ -46,6 +46,30 @@
 				</XButton>
 			</p>
 		</div>
+		<div
+			v-if="showProjectSelector"
+			class="add-task__project"
+		>
+			<label
+				class="add-task__project-label"
+				:for="projectSelectId"
+			>
+				{{ $t('project.list.addToProject') }}
+			</label>
+			<ProjectSearch
+				:id="projectSelectId"
+				:model-value="selectedProject"
+				:show-all-when-empty="true"
+				class="add-task__project-search"
+				@update:modelValue="project => projectOverride = project"
+			/>
+		</div>
+		<p
+			v-if="showProjectSelector && showNoDefaultProjectHint"
+			class="pbs-2 mbs-0 help has-text-start"
+		>
+			{{ $t('project.list.addToProjectNoDefault') }}
+		</p>
 		<Expandable :open="errorMessage !== ''">
 			<p
 				v-if="errorMessage !== ''"
@@ -65,9 +89,11 @@ import {useRouter} from 'vue-router'
 
 import {RELATION_KIND} from '@/types/IRelationKind'
 import type {ITask} from '@/modelTypes/ITask'
+import type {IProject} from '@/modelTypes/IProject'
 
 import Expandable from '@/components/base/Expandable.vue'
 import QuickAddMagic from '@/components/tasks/partials/QuickAddMagic.vue'
+import ProjectSearch from '@/components/tasks/partials/ProjectSearch.vue'
 import {parseSubtasksViaIndention} from '@/helpers/parseSubtasksViaIndention'
 import TaskRelationService from '@/services/taskRelation'
 import TaskRelationModel from '@/models/taskRelation'
@@ -76,6 +102,7 @@ import {error} from '@/message'
 
 import {useAuthStore} from '@/stores/auth'
 import {useTaskStore} from '@/stores/tasks'
+import {useProjectStore} from '@/stores/projects'
 
 import {useAutoHeightTextarea} from '@/composables/useAutoHeightTextarea'
 import TaskService from '@/services/task'
@@ -83,13 +110,21 @@ import TaskModel from '@/models/task'
 
 const props = withDefaults(defineProps<{
 	defaultPosition?: number,
+	/**
+	 * Shows a project picker below the input. Use it wherever the project can't be
+	 * derived from the route, like the home page - without it, adding a task there
+	 * only works when a default project is set.
+	 */
+	showProjectSelector?: boolean,
 }>(), {
 	defaultPosition: undefined,
+	showProjectSelector: false,
 })
 
 const emit = defineEmits(['taskAdded'])
 
 const textareaId = computed(() => `task-add-textarea-${Math.random().toString(36).substr(2, 9)}`)
+const projectSelectId = computed(() => `task-add-project-${Math.random().toString(36).substr(2, 9)}`)
 
 const newTaskTitle = ref('')
 const {textarea: newTaskInput} = useAutoHeightTextarea(newTaskTitle)
@@ -97,7 +132,22 @@ const {textarea: newTaskInput} = useAutoHeightTextarea(newTaskTitle)
 const {t} = useI18n({useScope: 'global'})
 const authStore = useAuthStore()
 const taskStore = useTaskStore()
+const projectStore = useProjectStore()
 const router = useRouter()
+
+const defaultProject = computed(() => {
+	const defaultProjectId = authStore.settings.defaultProjectId
+	return defaultProjectId
+		? projectStore.projects[defaultProjectId] as IProject | undefined
+		: undefined
+})
+
+// null means "not overridden", so the picker keeps following the default project
+// until the user actively picks something else.
+const projectOverride = ref<IProject | null>(null)
+const selectedProject = computed(() => projectOverride.value ?? defaultProject.value)
+
+const showNoDefaultProjectHint = computed(() => !projectStore.isLoading && typeof selectedProject.value === 'undefined')
 
 // enable only if we don't have a modal
 // onStartTyping(() => {
@@ -154,7 +204,7 @@ async function addTask() {
 	const taskCollectionService = new TaskService()
 	const projectIndices = new Map<number, number>()
 
-	let currentProjectId = authStore.settings.defaultProjectId
+	let currentProjectId = selectedProject.value?.id ?? authStore.settings.defaultProjectId
 	if (typeof router.currentRoute.value.params.projectId !== 'undefined') {
 		currentProjectId = Number(router.currentRoute.value.params.projectId)
 	}
@@ -317,6 +367,25 @@ defineExpose({
 		flex-shrink: 0;
 		margin-block-end: 0;
 	}
+}
+
+.add-task__project {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	margin-block-start: .75rem;
+	text-align: start;
+}
+
+.add-task__project-label {
+	flex-shrink: 0;
+	color: var(--grey-500);
+	font-size: .85rem;
+}
+
+.add-task__project-search {
+	flex-grow: 1;
+	max-inline-size: 20rem;
 }
 
 .task-input-wrapper {
