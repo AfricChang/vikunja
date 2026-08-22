@@ -1549,6 +1549,12 @@
       "title": "No iterations yet",
       "text": "Create an iteration to plan tasks across projects."
     },
+    "home": {
+      "eyebrow": "Active iteration",
+      "pageTitle": "Active iterations",
+      "noTasks": "This iteration has no tasks yet.",
+      "allDone": "Everything in this iteration is done."
+    },
     "form": {
       "title": "Name",
       "start": "Start time",

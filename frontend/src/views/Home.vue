@@ -36,8 +36,14 @@
 				:show-even-number-of-projects="true"
 			/>
 		</div>
+		<ActiveIterationTasks
+			v-for="iteration in shownIterations"
+			:key="iteration.id"
+			:iteration="iteration"
+			class="is-max-width-desktop has-text-start show-tasks"
+		/>
 		<ShowTasks
-			v-if="projectStore.hasProjects"
+			v-if="showTasks"
 			:key="showTasksKey"
 			:label-ids="labelIds"
 			class="show-tasks"
@@ -48,25 +54,30 @@
 </template>
 
 <script lang="ts" setup>
-import {ref, computed} from 'vue'
+import {ref, computed, watchEffect} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
+import {useI18n} from 'vue-i18n'
 
 import Message from '@/components/misc/Message.vue'
 import ShowTasks from '@/views/tasks/ShowTasks.vue'
 import ProjectCardGrid from '@/components/project/partials/ProjectCardGrid.vue'
 import AddTask from '@/components/tasks/AddTask.vue'
 import ImportHint from '@/components/home/ImportHint.vue'
+import ActiveIterationTasks from '@/components/home/ActiveIterationTasks.vue'
 
 import {getHistory} from '@/modules/projectHistory'
 import {parseDateOrNull} from '@/helpers/parseDateOrNull'
 import {formatDateSince, formatDisplayDate} from '@/helpers/time/formatDate'
+import {setTitle} from '@/helpers/setTitle'
 import {useDaytimeSalutation} from '@/composables/useDaytimeSalutation'
+import {useActiveIterations} from '@/composables/useActiveIterations'
 
 import {useProjectStore} from '@/stores/projects'
 import {useAuthStore} from '@/stores/auth'
 
 const salutation = useDaytimeSalutation()
 
+const {t} = useI18n({useScope: 'global'})
 const authStore = useAuthStore()
 const projectStore = useProjectStore()
 const route = useRoute()
@@ -94,6 +105,32 @@ const labelIds = computed(() => {
 		return undefined
 	}
 	return Array.isArray(labelsParam) ? labelsParam : [labelsParam]
+})
+
+const {iterations: activeIterations, resolved: iterationsResolved} = useActiveIterations()
+
+// A label in the url is the user explicitly asking for a filtered task list, so
+// it wins over the iteration overview.
+const hasLabelFilter = computed(() => (labelIds.value?.length ?? 0) > 0)
+
+const shownIterations = computed(() => hasLabelFilter.value ? [] : activeIterations.value)
+
+// Both lists stay hidden until we know whether there is an active iteration —
+// otherwise the task list would render first and then be replaced by it.
+const showTasks = computed(() => projectStore.hasProjects
+	&& iterationsResolved.value
+	&& shownIterations.value.length === 0)
+
+// ShowTasks sets the document title itself, so this only has to cover the case
+// where it is not rendered.
+watchEffect(() => {
+	if (shownIterations.value.length === 0) {
+		return
+	}
+
+	setTitle(shownIterations.value.length === 1
+		? shownIterations.value[0].title
+		: t('iteration.home.pageTitle'))
 })
 
 // This is to reload the tasks list after adding a new task through the global task add.
