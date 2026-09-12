@@ -22,7 +22,7 @@
 		<AddTask
 			class="is-max-width-desktop"
 			:show-project-selector="true"
-			@taskAdded="updateTaskKey"
+			@tasksAdded="updateTaskKey"
 		/>
 		<ImportHint v-if="tasksLoaded" />
 		<div

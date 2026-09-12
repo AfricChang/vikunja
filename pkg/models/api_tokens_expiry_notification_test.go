@@ -20,14 +20,16 @@ import (
 	"testing"
 	"time"
 
+	"code.vikunja.io/api/pkg/notifications"
 	"code.vikunja.io/api/pkg/user"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAPITokenExpiringWeekNotification(t *testing.T) {
 	u := &user.User{ID: 1, Name: "Test User"}
-	token := &APIToken{ID: 42, Title: "My Token", ExpiresAt: time.Now().Add(7 * 24 * time.Hour)}
+	token := &APIToken{ID: 42, Title: "My Token", ExpiresAt: time.Now().Add(7*24*time.Hour - time.Minute)}
 
 	n := &APITokenExpiringWeekNotification{User: u, Token: token}
 
@@ -46,12 +48,16 @@ func TestAPITokenExpiringWeekNotification(t *testing.T) {
 	t.Run("ToMail", func(t *testing.T) {
 		mail := n.ToMail("en")
 		assert.NotNil(t, mail)
+
+		opts, err := notifications.RenderMail(mail, "en")
+		require.NoError(t, err)
+		assert.Contains(t, opts.Message, "(in 6 days")
 	})
 }
 
 func TestAPITokenExpiringDayNotification(t *testing.T) {
 	u := &user.User{ID: 1, Name: "Test User"}
-	token := &APIToken{ID: 99, Title: "CI Token", ExpiresAt: time.Now().Add(24 * time.Hour)}
+	token := &APIToken{ID: 99, Title: "CI Token", ExpiresAt: time.Now().Add(24*time.Hour - time.Minute)}
 
 	n := &APITokenExpiringDayNotification{User: u, Token: token}
 
@@ -70,5 +76,9 @@ func TestAPITokenExpiringDayNotification(t *testing.T) {
 	t.Run("ToMail", func(t *testing.T) {
 		mail := n.ToMail("en")
 		assert.NotNil(t, mail)
+
+		opts, err := notifications.RenderMail(mail, "en")
+		require.NoError(t, err)
+		assert.Contains(t, opts.Message, "(in 23 hours")
 	})
 }

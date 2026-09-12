@@ -60,19 +60,28 @@ func (f *File) fileID() string {
 	return strconv.FormatInt(f.ID, 10)
 }
 
+// DeleteBlob removes a stored blob after its database row has been rolled back.
+func DeleteBlob(id int64) error {
+	return storage.Remove(strconv.FormatInt(id, 10))
+}
+
 // LoadFileByID returns a file by its ID
 func (f *File) LoadFileByID() (err error) {
 	f.File, err = storage.Open(f.fileID())
 	return
 }
 
-// LoadFileMetaByID loads everything about a file without loading the actual file
-func (f *File) LoadFileMetaByID() (err error) {
-	exists, err := x.Where("id = ?", f.ID).Get(f)
+// LoadFileMetaByID loads the file metadata using the caller's session — an engine
+// query under an open transaction needs a second pool connection and can deadlock the pool.
+func (f *File) LoadFileMetaByID(s *xorm.Session) (err error) {
+	exists, err := s.Where("id = ?", f.ID).Get(f)
+	if err != nil {
+		return err
+	}
 	if !exists {
 		return ErrFileDoesNotExist{FileID: f.ID}
 	}
-	return
+	return nil
 }
 
 // Create creates a new file from an FileHeader

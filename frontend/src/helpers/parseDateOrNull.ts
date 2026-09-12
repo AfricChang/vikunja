@@ -1,14 +1,18 @@
-/**
- * Make date objects from timestamps
- */
-export function parseDateOrNull(date: string | Date) {
-	if (date instanceof Date) {
-		return date
+// The api sends this year instead of null for an unset date.
+const ZERO_TIME_YEAR = 1
+
+export function parseDateOrNull(date: Date | string | null | undefined): Date | null {
+	const parsed = date instanceof Date
+		? date
+		: (typeof date === 'string' && date !== '' ? new Date(date) : null)
+
+	if (
+		parsed === null ||
+		Number.isNaN(parsed.getTime()) ||
+		parsed.getUTCFullYear() <= ZERO_TIME_YEAR
+	) {
+		return null
 	}
 
-	if ((typeof date === 'string') && !date.startsWith('0001')) {
-		return new Date(date)
-	}
-
-	return null
+	return parsed
 }

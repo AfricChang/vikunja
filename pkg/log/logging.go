@@ -39,7 +39,30 @@ var logPath = "."
 // InitLogger initializes the global log handler
 func InitLogger() {
 	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+	setStandardLogHandler(handler)
+}
+
+func setStandardLogHandler(handler slog.Handler) {
+	previous := logInstance
 	logInstance = slog.New(handler)
+	if previous != nil {
+		if closer, ok := previous.Handler().(io.Closer); ok {
+			_ = closer.Close()
+		}
+	}
+}
+
+type closableLogHandler struct {
+	slog.Handler
+	io.Closer
+}
+
+func (h *closableLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &closableLogHandler{Handler: h.Handler.WithAttrs(attrs), Closer: h.Closer}
+}
+
+func (h *closableLogHandler) WithGroup(name string) slog.Handler {
+	return &closableLogHandler{Handler: h.Handler.WithGroup(name), Closer: h.Closer}
 }
 
 func makeLogHandler(enabled bool, output string, logfile string, level string, format string) slog.Handler {
@@ -70,7 +93,11 @@ func makeLogHandler(enabled bool, output string, logfile string, level string, f
 		writer = getLogWriter(output, logfile)
 	}
 
-	return createHandler(writer, slogLevel, format)
+	handler := createHandler(writer, slogLevel, format)
+	if closer, ok := writer.(io.Closer); enabled && output == "file" && ok {
+		return &closableLogHandler{Handler: handler, Closer: closer}
+	}
+	return handler
 }
 
 // createHandler creates a consistent slog handler for all loggers
@@ -103,7 +130,7 @@ func NewHTTPLogger(enabled bool, output string, format string) *slog.Logger {
 func ConfigureStandardLogger(enabled bool, output string, path string, level string, format string) {
 	logPath = path
 	handler := makeLogHandler(enabled, output, "standard", level, format)
-	logInstance = slog.New(handler)
+	setStandardLogHandler(handler)
 }
 
 // wrapLogger is used for libraries requiring a Debugf method.

@@ -157,3 +157,63 @@ func TestRememberForRecomputesWhenStoredValueCannotBeDeserialized(t *testing.T) 
 	assert.Equal(t, int64(42), val)
 	assert.Equal(t, 1, called)
 }
+
+func TestPutWithTTL(t *testing.T) {
+	waitForExpiry := func(t *testing.T) {
+		t.Helper()
+		// Advancing the clock must not read the key: IncrBy needs to handle expiry itself.
+		afterInsertion := time.Now()
+		require.Eventually(t, func() bool {
+			return time.Since(afterInsertion) > time.Nanosecond
+		}, time.Second, time.Millisecond)
+	}
+	t.Run("value exists before the ttl passed", func(t *testing.T) {
+		store = memory.NewStorage()
+		require.NoError(t, PutWithTTL("foo", "bar", time.Minute))
+
+		val, exists, err := Get("foo")
+		require.NoError(t, err)
+		assert.True(t, exists)
+		assert.Equal(t, "bar", val)
+	})
+	t.Run("value is gone after the ttl passed", func(t *testing.T) {
+		store = memory.NewStorage()
+		require.NoError(t, PutWithTTL("foo", "bar", time.Nanosecond))
+		waitForExpiry(t)
+
+		_, exists, err := Get("foo")
+		require.NoError(t, err)
+		assert.False(t, exists)
+	})
+	t.Run("expired keys are not listed", func(t *testing.T) {
+		store = memory.NewStorage()
+		require.NoError(t, PutWithTTL("prefix_expired", "bar", time.Nanosecond))
+		require.NoError(t, PutWithTTL("prefix_valid", "bar", time.Minute))
+		waitForExpiry(t)
+
+		keys, err := ListKeys("prefix_")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"prefix_valid"}, keys)
+	})
+	t.Run("put clears an existing ttl", func(t *testing.T) {
+		store = memory.NewStorage()
+		require.NoError(t, PutWithTTL("foo", "bar", time.Nanosecond))
+		require.NoError(t, Put("foo", "baz"))
+
+		val, exists, err := Get("foo")
+		require.NoError(t, err)
+		assert.True(t, exists)
+		assert.Equal(t, "baz", val)
+	})
+	t.Run("incrementing after ttl expiry starts fresh", func(t *testing.T) {
+		store = memory.NewStorage()
+		require.NoError(t, PutWithTTL("c", int64(5), time.Nanosecond))
+		waitForExpiry(t)
+		require.NoError(t, IncrBy("c", 1))
+
+		val, exists, err := Get("c")
+		require.NoError(t, err)
+		assert.True(t, exists)
+		assert.Equal(t, int64(1), val)
+	})
+}

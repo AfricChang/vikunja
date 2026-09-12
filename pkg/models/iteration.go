@@ -211,7 +211,10 @@ func hydrateIteration(s *xorm.Session, i *Iteration, a web.Auth) error {
 		return err
 	}
 	i.Owner = owner
-	visible := accessibleProjectIDsSubquery(a, "tasks.project_id")
+	visible, err := accessibleProjectIDsCond(s, a, "tasks.project_id")
+	if err != nil {
+		return err
+	}
 	type counts struct {
 		Total int64 `xorm:"total"`
 		Done  int64 `xorm:"done"`
@@ -242,9 +245,13 @@ func ListIterationTasks(s *xorm.Session, a web.Auth, iterationID int64, search, 
 	if _, err := requireOwnedIteration(s, a, iterationID); err != nil {
 		return nil, 0, err
 	}
+	visible, err := accessibleProjectIDsCond(s, a, "tasks.project_id")
+	if err != nil {
+		return nil, 0, err
+	}
 	cond := builder.And(
 		builder.Eq{"iteration_tasks.iteration_id": iterationID},
-		accessibleProjectIDsSubquery(a, "tasks.project_id"),
+		visible,
 		taskNotDeletedCond("tasks"),
 	)
 	if search != "" {

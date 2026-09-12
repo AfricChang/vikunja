@@ -4,7 +4,7 @@ import {seed} from '../../support/seed'
 import {TaskFactory} from '../../factories/task'
 import {BucketFactory} from '../../factories/bucket'
 import {updateUserSettings} from '../../support/updateUserSettings'
-import {createDefaultViews} from '../project/prepareProjects'
+import {createDefaultViews, createProjects} from '../project/prepareProjects'
 import type {APIRequestContext} from '@playwright/test'
 
 async function seedTasks(apiContext: APIRequestContext, numberOfTasks = 50, startDueDate = new Date()) {
@@ -94,7 +94,11 @@ test.describe('Home Page Task Overview', () => {
 
 		await page.goto(`/projects/${tasks[0].project_id}/1`)
 		await page.waitForLoadState('networkidle')
-		const taskResponsePromise = page.waitForResponse('**/api/v1/projects/*/tasks')
+		const taskResponsePromise = page.waitForResponse(response =>
+			response.url().includes('/api/v2/projects/') &&
+			response.url().includes('/tasks/bulk') &&
+			response.request().method() === 'POST',
+		)
 		await page.locator('.task-add textarea').fill(newTaskTitle)
 		await page.locator('.task-add textarea').press('Enter')
 		await taskResponsePromise
@@ -145,9 +149,9 @@ test.describe('Home Page Task Overview', () => {
 
 		// Wait for the task creation request to complete
 		const createTaskPromise = page.waitForResponse(response =>
-			response.url().includes('/projects/') &&
-			response.url().includes('/tasks') &&
-			response.request().method() === 'PUT',
+			response.url().includes('/api/v2/projects/') &&
+			response.url().includes('/tasks/bulk') &&
+			response.request().method() === 'POST',
 		)
 		await addTaskInput.press('Enter')
 		await createTaskPromise
@@ -155,6 +159,50 @@ test.describe('Home Page Task Overview', () => {
 		// Wait for the task to appear in the list (no due date tasks appear at the bottom)
 		await expect(page.locator('[data-cy="showTasks"] .card .task').last()).toContainText(newTaskTitle, {timeout: 10000})
 	})
+
+	for (const hasDefaultProject of [false, true]) {
+		test(`Should bulk add to the selected home project ${hasDefaultProject ? 'instead of the default project' : 'without a default project'}`, async ({authenticatedPage: page, apiContext}) => {
+			const projects = await createProjects(2)
+			await page.goto('/')
+			const token = await page.evaluate(() => localStorage.getItem('token'))
+			await updateUserSettings(apiContext, token, {
+				default_project_id: hasDefaultProject ? projects[0].id : 0,
+			})
+			await page.reload()
+
+			const projectSelector = page.locator('.add-task__project').getByRole('combobox')
+			await expect(projectSelector).toHaveValue(hasDefaultProject ? projects[0].title : '')
+			await projectSelector.click()
+			await projectSelector.fill('')
+			await projectSelector.press('Backspace')
+			await page.getByRole('option').filter({hasText: projects[1].title}).click()
+			await expect(projectSelector).toHaveValue(projects[1].title)
+
+			const titles = ['First home batch task', 'Second home batch task']
+			const createTasks = page.waitForResponse(response =>
+				response.url().endsWith(`/api/v2/projects/${projects[1].id}/tasks/bulk`) &&
+				response.request().method() === 'POST',
+			)
+			await page.locator('.task-add textarea').fill(titles.join('\n'))
+			await page.locator('.task-add textarea').press('Enter')
+			const response = await createTasks
+			expect(response.ok()).toBeTruthy()
+			const {tasks}: {tasks: {title: string, project_id: number}[]} = await response.json()
+			expect(tasks.map(task => task.title)).toEqual(titles)
+			expect(tasks.every(task => task.project_id === projects[1].id)).toBeTruthy()
+			for (const title of titles) {
+				await expect(page.locator('[data-cy="showTasks"]')).toContainText(title)
+			}
+
+			await page.goto(`/projects/${projects[1].id}/${projects[1].views[0].id}`)
+			await expect(page.locator('.tasks .task .tasktext')).toContainText(titles)
+			await page.reload()
+			await expect(page.locator('.tasks .task .tasktext')).toContainText(titles)
+			await page.goto(`/projects/${projects[0].id}/${projects[0].views[0].id}`)
+			await expect(page.getByText('This project is currently empty.')).toBeVisible()
+			await expect(page.locator('.tasks .task')).toHaveCount(0)
+		})
+	}
 
 	test('Should show the cta buttons for new project when there are no tasks', async ({authenticatedPage: page}) => {
 		// Need a project so that ShowTasks renders (which sets tasksLoaded=true),

@@ -94,10 +94,8 @@ const projectStore = useProjectStore()
 
 const tasks = ref<ITask[]>([])
 const loading = ref(true)
-// Tasks checked off since the list was loaded. The iteration's counts come from
-// the server, so without this the progress bar would sit still while the user
-// ticks tasks in front of it.
-const doneDelta = ref(0)
+// The list loads only open tasks; shared task objects also reflect checkbox undo.
+const doneDelta = computed(() => tasks.value.filter(task => task.done).length)
 
 const detailRoute = computed(() => ({name: 'iterations.detail', params: {id: props.iteration.id}}))
 
@@ -118,7 +116,6 @@ function canMarkAsDone(task: ITask) {
 
 async function load(iterationID: number) {
 	loading.value = true
-	doneDelta.value = 0
 	try {
 		tasks.value = (await service.listTasks(iterationID, {
 			status: 'open',
@@ -142,10 +139,6 @@ function updateTask(updatedTask: ITask) {
 	const index = tasks.value.findIndex(task => task.id === updatedTask.id)
 	if (index === -1) {
 		return
-	}
-
-	if (tasks.value[index].done !== updatedTask.done) {
-		doneDelta.value += updatedTask.done ? 1 : -1
 	}
 
 	tasks.value[index] = updatedTask

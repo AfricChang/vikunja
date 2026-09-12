@@ -17,6 +17,7 @@
 package log
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,6 +28,11 @@ import (
 
 func TestConfigureStandardLoggerWithPath(t *testing.T) {
 	tempDir := t.TempDir()
+	previousPath := logPath
+	t.Cleanup(func() {
+		InitLogger()
+		logPath = previousPath
+	})
 
 	ConfigureStandardLogger(true, "file", tempDir, "INFO", "text")
 
@@ -42,6 +48,8 @@ func TestConfigureStandardLoggerWithPath(t *testing.T) {
 
 func TestMakeLogHandlerCreatesCorrectLogFile(t *testing.T) {
 	tempDir := t.TempDir()
+	previousPath := logPath
+	t.Cleanup(func() { logPath = previousPath })
 	logPath = tempDir
 
 	tests := []struct {
@@ -58,7 +66,10 @@ func TestMakeLogHandlerCreatesCorrectLogFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = makeLogHandler(true, "file", tt.logfile, "INFO", "text")
+			handler := makeLogHandler(true, "file", tt.logfile, "INFO", "text")
+			closer, ok := handler.(io.Closer)
+			require.True(t, ok)
+			t.Cleanup(func() { assert.NoError(t, closer.Close()) })
 
 			expectedPath := filepath.Join(tempDir, tt.expected)
 			_, err := os.Stat(expectedPath)
@@ -69,6 +80,11 @@ func TestMakeLogHandlerCreatesCorrectLogFile(t *testing.T) {
 
 func TestConfigureStandardLoggerSetsPathBeforeHandler(t *testing.T) {
 	tempDir := t.TempDir()
+	previousPath := logPath
+	t.Cleanup(func() {
+		InitLogger()
+		logPath = previousPath
+	})
 
 	// This test verifies the fix for issue #2020
 	// The path must be set BEFORE makeLogHandler is called

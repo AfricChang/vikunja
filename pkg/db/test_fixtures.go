@@ -19,7 +19,7 @@ package db
 import (
 	"embed"
 	"fmt"
-	"path/filepath"
+	"path"
 	"testing"
 
 	"code.vikunja.io/api/pkg/config"
@@ -44,7 +44,7 @@ func InitFixtures(tablenames ...string) (err error) {
 	// Otherwise, load all fixtures
 	if len(tablenames) > 0 {
 		for i, name := range tablenames {
-			tablenames[i] = filepath.Join(dir, name+".yml")
+			tablenames[i] = path.Join(dir, name+".yml")
 		}
 		testfiles = testfixtures.Files(tablenames...)
 	} else {
@@ -70,6 +70,9 @@ func InitFixtures(tablenames ...string) (err error) {
 
 // LoadFixtures load fixtures for a test database
 func LoadFixtures() error {
+	// Deferred, not at the end: a load that fails partway still truncated tables.
+	defer invalidateAllSessionCaches()
+
 	err := fixtures.Load()
 	if err != nil {
 		return err

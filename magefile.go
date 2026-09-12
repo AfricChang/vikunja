@@ -38,7 +38,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/iancoleman/strcase"
@@ -61,21 +60,23 @@ var (
 
 	// Aliases are mage aliases of targets
 	Aliases = map[string]any{
-		"build":                 Build.Build,
-		"check:got-swag":        Check.GotSwag,
-		"dev:make-migration":    Dev.MakeMigration,
-		"dev:make-event":        Dev.MakeEvent,
-		"dev:make-listener":     Dev.MakeListener,
-		"dev:make-notification": Dev.MakeNotification,
-		"dev:prepare-worktree":  Dev.PrepareWorktree,
-		"dev:tag-release":       Dev.TagRelease,
-		"test:e2e":              Test.E2E,
-		"test:e2e-api":          Test.E2EApi,
-		"plugins:build":         Plugins.Build,
-		"lint":                  Check.Golangci,
-		"lint:fix":              Check.GolangciFix,
-		"generate:config-yaml":  Generate.ConfigYAML,
-		"generate:swagger-docs": Generate.SwaggerDocs,
+		"build":                  Build.Build,
+		"check:got-swag":         Check.GotSwag,
+		"dev:make-migration":     Dev.MakeMigration,
+		"dev:make-event":         Dev.MakeEvent,
+		"dev:make-listener":      Dev.MakeListener,
+		"dev:make-notification":  Dev.MakeNotification,
+		"dev:prepare-worktree":   Dev.PrepareWorktree,
+		"dev:tag-release":        Dev.TagRelease,
+		"test:e2e":               Test.E2E,
+		"test:e2e-api":           Test.E2EApi,
+		"plugins:build":          Plugins.Build,
+		"lint":                   Check.Golangci,
+		"lint:fix":               Check.GolangciFix,
+		"generate:config-yaml":   Generate.ConfigYAML,
+		"generate:swagger-docs":  Generate.SwaggerDocs,
+		"generate:yaegi-symbols": Generate.YaegiSymbols,
+		"check:yaegi-symbols":    Check.YaegiSymbols,
 	}
 )
 
@@ -298,26 +299,6 @@ func getRandomPort(ctx context.Context) (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-// setProcessGroup configures a command to run in its own process group,
-// so that all child processes can be killed together.
-func setProcessGroup(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-}
-
-// killProcessGroup sends a signal to the entire process group of the given command.
-func killProcessGroup(cmd *exec.Cmd) error {
-	if cmd.Process == nil {
-		return nil
-	}
-	if pgid, err := syscall.Getpgid(cmd.Process.Pid); err == nil { // use best-effort to kill full process group
-		err = syscall.Kill(-pgid, syscall.SIGTERM)
-		if err != nil {
-			return err
-		}
-	}
-	return cmd.Wait()
-}
-
 // waitForHTTP polls a URL until it returns a 200 status or the timeout expires.
 func waitForHTTP(ctx context.Context, url string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
@@ -340,7 +321,12 @@ func waitForHTTP(ctx context.Context, url string, timeout time.Duration) error {
 }
 
 func ensureFrontendDistExists() error {
-	distPath := filepath.Join("frontend", "dist")
+	return ensureFrontendDistExistsIn(".")
+}
+
+// The embedded frontend needs a placeholder until it has been built in a fresh worktree.
+func ensureFrontendDistExistsIn(root string) error {
+	distPath := filepath.Join(root, "frontend", "dist")
 	if _, err := os.Stat(distPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(distPath, 0o755); err != nil {
 			return fmt.Errorf("error creating %s: %w", distPath, err)
@@ -375,9 +361,34 @@ func Fmt(ctx context.Context) error {
 
 type Test mg.Namespace
 
+const webtestsPackage = "./pkg/webtests"
+
+func goTestPackagesExcept(ctx context.Context, exclude ...string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "go", "list", "./...")
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list go packages: %w", err)
+	}
+
+	excluded := make(map[string]bool, len(exclude))
+	for _, pattern := range exclude {
+		excluded[strings.TrimPrefix(pattern, "./")] = true
+	}
+
+	var packages []string
+	for _, pkg := range strings.Fields(string(out)) {
+		if excluded[strings.TrimPrefix(pkg, PACKAGE+"/")] {
+			continue
+		}
+		packages = append(packages, pkg)
+	}
+	return packages, nil
+}
+
 // Feature runs the feature tests
 func (Test) Feature(ctx context.Context) error {
-	mg.Deps(initVars)
+	mg.Deps(initVars, ensureFrontendDistExists)
 	// We run everything sequentially and not in parallel to prevent issues with real test databases
 	return runAndStreamOutput(ctx, "go", "test", goDetectVerboseFlag(), "-p", "1", "-coverprofile", "cover.out", "-timeout", "45m", "-short", "./...")
 }
@@ -391,27 +402,37 @@ func (Test) Coverage(ctx context.Context) error {
 
 // Web runs the web tests
 func (Test) Web(ctx context.Context) error {
-	mg.Deps(initVars)
+	mg.Deps(initVars, ensureFrontendDistExists)
 	// We run everything sequentially and not in parallel to prevent issues with real test databases
 	args := []string{"test", goDetectVerboseFlag(), "-p", "1", "-timeout", "45m", "./pkg/webtests"}
 	return runAndStreamOutput(ctx, "go", args...)
 }
 
 func (Test) Filter(ctx context.Context, filter string) error {
-	mg.Deps(initVars)
+	mg.Deps(initVars, ensureFrontendDistExists)
+	packages, err := goTestPackagesExcept(ctx, webtestsPackage)
+	if err != nil {
+		return err
+	}
 	// We run everything sequentially and not in parallel to prevent issues with real test databases
-	return runAndStreamOutput(ctx, "go", "test", goDetectVerboseFlag(), "-p", "1", "-timeout", "45m", "-run", filter, "-short", "./...")
+	args := append([]string{"test", goDetectVerboseFlag(), "-p", "1", "-timeout", "45m", "-run", filter, "-short"}, packages...)
+	if err := runAndStreamOutput(ctx, "go", args...); err != nil {
+		return err
+	}
+
+	// Webtests skip their entire TestMain under -short, even when the filter matches.
+	return runAndStreamOutput(ctx, "go", "test", goDetectVerboseFlag(), "-p", "1", "-timeout", "45m", "-run", filter, webtestsPackage)
 }
 
 func (Test) All() {
-	mg.Deps(initVars)
+	mg.Deps(initVars, ensureFrontendDistExists)
 	mg.Deps(Test.Feature, Test.Web, Test.Caldav, Test.E2EApi)
 }
 
 // Caldav runs the CalDAV protocol compliance tests in pkg/caldavtests.
 // These tests exercise the full HTTP router with WebDAV/CalDAV requests.
 func (Test) Caldav(ctx context.Context) error {
-	mg.Deps(initVars)
+	mg.Deps(initVars, ensureFrontendDistExists)
 	return runAndStreamOutput(ctx, "go", "test", goDetectVerboseFlag(), "-p", "1", "-timeout", "45m", "./pkg/caldavtests")
 }
 
@@ -419,7 +440,7 @@ func (Test) Caldav(ctx context.Context) error {
 // These tests use the real event system (not events.Fake()) to verify
 // the full async pipeline: web handler → DB → event dispatch → watermill → listener.
 func (Test) E2EApi(ctx context.Context) error {
-	mg.Deps(initVars)
+	mg.Deps(initVars, ensureFrontendDistExists)
 	return runAndStreamOutput(ctx, "go", "test", goDetectVerboseFlag(), "-p", "1", "-timeout", "45m", "./pkg/e2etests")
 }
 
@@ -489,7 +510,11 @@ func (Test) E2E(ctx context.Context, args string) error {
 	// Start the API server — all config via env vars, no config file
 	// Uses in-memory SQLite (no DB file on disk)
 	fmt.Println("\n--- Starting API server ---")
-	apiCmd := exec.CommandContext(ctx, "./vikunja", "web")
+	apiExecutable, err := filepath.Abs(BinLocation)
+	if err != nil {
+		return err
+	}
+	apiCmd := exec.CommandContext(ctx, apiExecutable, "web")
 	apiCmd.Env = append(os.Environ(),
 		fmt.Sprintf("VIKUNJA_SERVICE_INTERFACE=:%d", apiPort),
 		fmt.Sprintf("VIKUNJA_SERVICE_PUBLICURL=http://127.0.0.1:%d/", apiPort),
@@ -512,7 +537,7 @@ func (Test) E2E(ctx context.Context, args string) error {
 	}
 	defer func() {
 		fmt.Println("\n--- Stopping API server ---")
-		if err := killProcessGroup(apiCmd); err != nil {
+		if err := killProcessGroup(ctx, apiCmd); err != nil {
 			fmt.Println("Failed to stop API server:", err)
 		}
 	}()
@@ -527,7 +552,7 @@ func (Test) E2E(ctx context.Context, args string) error {
 
 	// Build the frontend
 	fmt.Println("\n--- Building frontend ---")
-	buildFrontendCmd := exec.CommandContext(ctx, "pnpm", "build:dev")
+	buildFrontendCmd := pnpmCommand(ctx, "build:dev")
 	buildFrontendCmd.Dir = "frontend"
 	buildFrontendCmd.Stdout = os.Stdout
 	buildFrontendCmd.Stderr = os.Stderr
@@ -538,7 +563,7 @@ func (Test) E2E(ctx context.Context, args string) error {
 
 	// Serve the built frontend with vite preview (static, no file watchers)
 	fmt.Println("\n--- Starting frontend preview server ---")
-	frontendCmd := exec.CommandContext(ctx, "pnpm", "preview:dev", "--port", strconv.Itoa(frontendPort)) //nolint:gosec // This mage task runs end to end tests with environment-based configuration, it must use the port environment variable to suit its current environment.
+	frontendCmd := pnpmCommand(ctx, "preview:dev", "--port", strconv.Itoa(frontendPort))
 	frontendCmd.Dir = "frontend"
 	frontendCmd.Stdout = os.Stdout
 	frontendCmd.Stderr = os.Stderr
@@ -548,7 +573,7 @@ func (Test) E2E(ctx context.Context, args string) error {
 	}
 	defer func() {
 		fmt.Println("\n--- Stopping frontend preview server ---")
-		if err := killProcessGroup(frontendCmd); err != nil {
+		if err := killProcessGroup(ctx, frontendCmd); err != nil {
 			fmt.Println("Failed to stop API server:", err)
 		}
 	}()
@@ -567,7 +592,7 @@ func (Test) E2E(ctx context.Context, args string) error {
 	if strings.TrimSpace(args) != "" {
 		playwrightArgs = append(playwrightArgs, strings.Fields(args)...)
 	}
-	playwrightCmd := exec.CommandContext(ctx, "pnpm", playwrightArgs...)
+	playwrightCmd := pnpmCommand(ctx, playwrightArgs...)
 	playwrightCmd.Dir = "frontend"
 	playwrightCmd.Env = append(os.Environ(),
 		fmt.Sprintf("API_URL=%s/", apiBase),
@@ -615,6 +640,42 @@ func (Check) GotSwag(ctx context.Context) error {
 
 	if oldHash != newHash {
 		return fmt.Errorf("swagger docs are not up to date: run 'mage generate:swagger-docs' and commit the result")
+	}
+	return nil
+}
+
+// YaegiSymbols checks if the yaegi symbol tables in pkg/yaegi_symbols need to be re-generated
+func (Check) YaegiSymbols(ctx context.Context) error {
+	mg.Deps(initVars)
+
+	// Same hash-compare approach as GotSwag: regenerate in place and compare.
+	// The regenerated files are not reset afterwards, which is fine for ci.
+	oldHashes := make(map[string]string, len(yaegiSymbolPackages))
+	for _, p := range yaegiSymbolPackages {
+		hash, err := calculateSha256FileHash(filepath.Join(yaegiSymbolsDir, p.outFile))
+		if err != nil {
+			return fmt.Errorf("error getting old hash of %s: %w", p.outFile, err)
+		}
+		oldHashes[p.outFile] = hash
+	}
+
+	if err := (Generate{}).YaegiSymbols(ctx); err != nil {
+		return err
+	}
+
+	var stale []string
+	for _, p := range yaegiSymbolPackages {
+		hash, err := calculateSha256FileHash(filepath.Join(yaegiSymbolsDir, p.outFile))
+		if err != nil {
+			return fmt.Errorf("error getting new hash of %s: %w", p.outFile, err)
+		}
+		if hash != oldHashes[p.outFile] {
+			stale = append(stale, p.outFile)
+		}
+	}
+
+	if len(stale) > 0 {
+		return fmt.Errorf("yaegi symbols are not up to date (%s): run 'mage generate:yaegi-symbols' and commit the result", strings.Join(stale, ", "))
 	}
 	return nil
 }
@@ -1059,7 +1120,7 @@ func extractFrontendTranslationKeysFromFile(filePath string) ([]TranslationKey, 
 func checkGolangCiLintInstalled(ctx context.Context) error {
 	mg.Deps(initVars, ensureFrontendDistExists)
 	if err := exec.CommandContext(ctx, "golangci-lint").Run(); err != nil && strings.Contains(err.Error(), "executable file not found") {
-		return fmt.Errorf("golangci-lint executable failed to run, please manually install golangci-lint by running the command: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.4.0")
+		return fmt.Errorf("golangci-lint executable failed to run, please manually install golangci-lint by running the command: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.13.0")
 	}
 	return nil
 }
@@ -1085,6 +1146,7 @@ func (Check) All() {
 		Check.Golangci,
 		Check.GotSwag,
 		Check.Translations,
+		Check.YaegiSymbols,
 	)
 }
 
@@ -1379,6 +1441,56 @@ func (Generate) SwaggerDocs(ctx context.Context) error {
 		return err
 	}
 	return runAndStreamOutput(ctx, "swag", "init", "-g", "./pkg/routes/routes.go", "--parseDependency", "-d", ".", "-o", "./pkg/swagger")
+}
+
+const yaegiSymbolsDir = "./pkg/yaegi_symbols"
+
+// yaegiSymbolPackages maps extracted import paths to their checked-in file names in pkg/yaegi_symbols.
+var yaegiSymbolPackages = []struct {
+	importPath string
+	outFile    string
+}{
+	{"code.vikunja.io/api/pkg/config", "vikunja_config.go"},
+	{"code.vikunja.io/api/pkg/db", "vikunja_db.go"},
+	{"code.vikunja.io/api/pkg/events", "vikunja_events.go"},
+	{"code.vikunja.io/api/pkg/log", "vikunja_log.go"},
+	{"code.vikunja.io/api/pkg/models", "vikunja_models.go"},
+	{"code.vikunja.io/api/pkg/plugins", "vikunja_plugins.go"},
+	{"code.vikunja.io/api/pkg/user", "vikunja_user.go"},
+	{"github.com/labstack/echo/v5", "echo.go"},
+	{"github.com/ThreeDotsLabs/watermill/message", "watermill.go"},
+	{"github.com/spf13/viper", "viper.go"},
+	{"src.techknowlogick.com/xormigrate", "xormigrate.go"},
+	{"xorm.io/xorm", "xorm.go"},
+}
+
+// YaegiSymbols regenerates the yaegi symbol tables in pkg/yaegi_symbols so
+// interpreted plugins see the current exported API.
+func (Generate) YaegiSymbols(ctx context.Context) error {
+	mg.Deps(initVars)
+
+	// Same replacer yaegi's extract command uses to derive the output file name.
+	replacer := strings.NewReplacer("/", "-", ".", "_", "~", "_")
+
+	for _, p := range yaegiSymbolPackages {
+		c := exec.CommandContext(ctx, "go", "run", "github.com/traefik/yaegi/cmd/yaegi", "extract", p.importPath) //nolint:gosec // import paths come from the hard-coded yaegiSymbolPackages list
+		c.Dir = yaegiSymbolsDir
+		c.Env = append(os.Environ(), "GOPACKAGE=yaegi_symbols")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		fmt.Printf("%s\n\n", c.String())
+		if err := c.Run(); err != nil {
+			return fmt.Errorf("error extracting yaegi symbols for %s: %w", p.importPath, err)
+		}
+
+		// yaegi extract exits 0 even when extraction fails, so the missing
+		// output file surfaces here as a rename error.
+		generated := filepath.Join(yaegiSymbolsDir, replacer.Replace(p.importPath)+".go")
+		if err := os.Rename(generated, filepath.Join(yaegiSymbolsDir, p.outFile)); err != nil {
+			return fmt.Errorf("error renaming extracted yaegi symbols for %s: %w", p.importPath, err)
+		}
+	}
+	return nil
 }
 
 type ConfigNode struct {
@@ -1676,9 +1788,12 @@ func (Dev) PrepareWorktree(ctx context.Context, name string, planPath string) er
 	// Initialize frontend
 	fmt.Println("Initializing frontend...")
 	frontendDir := filepath.Join(worktreePath, "frontend")
+	if err := ensureFrontendDistExistsIn(worktreePath); err != nil {
+		return err
+	}
 
 	// Run pnpm install
-	pnpmCmd := exec.CommandContext(ctx, "pnpm", "i")
+	pnpmCmd := pnpmCommand(ctx, "i")
 	pnpmCmd.Dir = frontendDir
 	pnpmCmd.Stdout = os.Stdout
 	pnpmCmd.Stderr = os.Stderr
@@ -1758,6 +1873,33 @@ func printReleaseStats(ctx context.Context, fromRef, toRef string) error {
 	return nil
 }
 
+// commitPathIfChanged stages and commits everything under path if it has
+// uncommitted changes. No-op when the path is clean.
+func commitPathIfChanged(ctx context.Context, path, message string) error {
+	status, err := runGitCommandWithOutput(ctx, "status", "--porcelain", "--", path)
+	if err != nil {
+		return fmt.Errorf("failed to check git status for %s: %w", path, err)
+	}
+
+	if strings.TrimSpace(string(status)) == "" {
+		fmt.Printf("%s is up to date, nothing to commit.\n", path)
+		return nil
+	}
+
+	if err := exec.CommandContext(ctx, "git", "add", path).Run(); err != nil {
+		return fmt.Errorf("failed to stage %s: %w", path, err)
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "commit", "-m", message)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to commit %s: %w", path, err)
+	}
+
+	return nil
+}
+
 // TagRelease creates a new release tag with changelog.
 // It updates the version badge in README.md, generates changelog using git-cliff,
 // commits the changes, and creates an annotated tag.
@@ -1796,6 +1938,24 @@ func (Dev) TagRelease(ctx context.Context, version string) error {
 
 	// Clean up the changelog
 	changelog = cleanupChangelog(changelog)
+
+	// Generated files must be part of the tag, so regenerate them here instead of
+	// waiting for the workflow which only commits them after the release ran.
+	fmt.Println("Regenerating swagger docs...")
+	if err := (Generate{}).SwaggerDocs(ctx); err != nil {
+		return fmt.Errorf("failed to generate swagger docs: %w", err)
+	}
+	if err := commitPathIfChanged(ctx, "pkg/swagger", "[skip ci] Updated swagger docs"); err != nil {
+		return err
+	}
+
+	fmt.Println("Regenerating yaegi symbols...")
+	if err := (Generate{}).YaegiSymbols(ctx); err != nil {
+		return fmt.Errorf("failed to generate yaegi symbols: %w", err)
+	}
+	if err := commitPathIfChanged(ctx, "pkg/yaegi_symbols", "[skip ci] Updated yaegi symbols"); err != nil {
+		return err
+	}
 
 	// Update README.md version badge
 	fmt.Println("Updating README.md version badge...")

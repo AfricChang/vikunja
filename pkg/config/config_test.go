@@ -90,7 +90,9 @@ func TestResolvePath(t *testing.T) {
 	// Save and restore rootpath
 	original := ServiceRootpath.GetString()
 	defer ServiceRootpath.Set(original)
-	ServiceRootpath.Set("/var/lib/vikunja")
+	rootPath := t.TempDir()
+	absolutePath := filepath.Join(t.TempDir(), "config.yml")
+	ServiceRootpath.Set(rootPath)
 
 	tests := []struct {
 		name     string
@@ -99,23 +101,23 @@ func TestResolvePath(t *testing.T) {
 	}{
 		{
 			name:     "absolute path returned as-is",
-			input:    "/etc/vikunja/config.yml",
-			expected: "/etc/vikunja/config.yml",
+			input:    absolutePath,
+			expected: absolutePath,
 		},
 		{
 			name:     "relative path joined with rootpath",
 			input:    "files",
-			expected: "/var/lib/vikunja/files",
+			expected: filepath.Join(rootPath, "files"),
 		},
 		{
 			name:     "relative subdir path joined with rootpath",
 			input:    "data/vikunja.db",
-			expected: "/var/lib/vikunja/data/vikunja.db",
+			expected: filepath.Join(rootPath, "data", "vikunja.db"),
 		},
 		{
 			name:     "empty string returns rootpath",
 			input:    "",
-			expected: "/var/lib/vikunja",
+			expected: rootPath,
 		},
 	}
 

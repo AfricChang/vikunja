@@ -2,13 +2,16 @@ import type {APIRequestContext} from '@playwright/test'
 import {objectToSnakeCase} from '../../src/helpers/case'
 
 export async function updateUserSettings(apiContext: APIRequestContext, token: string, settings: any) {
-	const apiUrl = process.env.API_URL || 'http://localhost:3456/api/v1'
+	const apiUrl = (process.env.API_URL || 'http://localhost:3456/api/v1').replace(/\/+$/, '')
 
 	const userResponse = await apiContext.get(`${apiUrl}/user`, {
 		headers: {
 			'Authorization': `Bearer ${token}`,
 		},
 	})
+	if (!userResponse.ok()) {
+		throw new Error(`Could not read user settings (${userResponse.status()}): ${await userResponse.text()}`)
+	}
 
 	const userData = await userResponse.json()
 	// GET /user returns { settings: { frontend_settings: ... }, ... }
@@ -30,10 +33,13 @@ export async function updateUserSettings(apiContext: APIRequestContext, token: s
 		}
 	}
 
-	await apiContext.post(`${apiUrl}/user/settings/general`, {
+	const updateResponse = await apiContext.post(`${apiUrl}/user/settings/general`, {
 		headers: {
 			'Authorization': `Bearer ${token}`,
 		},
 		data: mergedSettings,
 	})
+	if (!updateResponse.ok()) {
+		throw new Error(`Could not update user settings (${updateResponse.status()}): ${await updateResponse.text()}`)
+	}
 }
