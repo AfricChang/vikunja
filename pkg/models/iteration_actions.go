@@ -291,6 +291,34 @@ func CloseIteration(s *xorm.Session, a web.Auth, id int64, request *IterationClo
 	if err := s.Where("iteration_id = ?", id).Find(&assignments); err != nil {
 		return nil, err
 	}
+	now := time.Now()
+	if len(assignments) > 0 {
+		allIDs := make([]int64, 0, len(assignments))
+		for _, assignment := range assignments {
+			allIDs = append(allIDs, assignment.TaskID)
+		}
+		existing, err := GetTasksSimpleByIDs(s, allIDs)
+		if err != nil {
+			return nil, err
+		}
+		existingIDs := make(map[int64]struct{}, len(existing))
+		for _, task := range existing {
+			existingIDs[task.ID] = struct{}{}
+		}
+		// Deleting a task leaves its iteration assignment behind; skip those
+		// orphaned rows so a deleted task can never block closing an iteration.
+		live := make([]*IterationTask, 0, len(assignments))
+		for _, assignment := range assignments {
+			if _, ok := existingIDs[assignment.TaskID]; ok {
+				live = append(live, assignment)
+				continue
+			}
+			if err := closeHistory(s, assignment.TaskID, id, a.GetID(), IterationLeftClosed, 0, now); err != nil {
+				return nil, err
+			}
+		}
+		assignments = live
+	}
 	allIDs := make([]int64, 0, len(assignments))
 	for _, assignment := range assignments {
 		allIDs = append(allIDs, assignment.TaskID)
@@ -307,7 +335,6 @@ func CloseIteration(s *xorm.Session, a web.Auth, id int64, request *IterationClo
 		wanted[taskID] = struct{}{}
 	}
 	rolled, skipped := []int64{}, []int64{}
-	now := time.Now()
 	for _, assignment := range assignments {
 		task := tasks[assignment.TaskID]
 		_, shouldRoll := wanted[assignment.TaskID]
